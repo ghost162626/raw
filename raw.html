@@ -38,7 +38,7 @@
     </style>
 </head>
 <body>
-    <!-- Apenas o código será inserido aqui pelo JavaScript -->
+    <!-- O código será inserido diretamente aqui -->
     <div id="codeContent"></div>
 
     <!-- Firebase SDK -->
@@ -78,7 +78,7 @@
                 const snapshot = await rawRef.once('value');
                 
                 if (!snapshot.exists()) {
-                    document.body.textContent = 'Erro: Raw não encontrado.';
+                    document.getElementById('codeContent').textContent = 'Erro: Raw não encontrado.';
                     return;
                 }
                 
@@ -87,13 +87,13 @@
                 // Verificar se é privado e precisa de chave
                 if (raw.visibility === 'private') {
                     if (!key || key !== raw.privateKey) {
-                        document.body.textContent = 'Erro: Chave de acesso inválida.';
+                        document.getElementById('codeContent').textContent = 'Erro: Chave de acesso inválida.';
                         return;
                     }
                 }
                 
-                // Mostrar APENAS o código, diretamente no body
-                document.body.textContent = raw.code;
+                // Mostrar APENAS o código na div codeContent
+                document.getElementById('codeContent').textContent = raw.code;
                 
                 // Incrementar visualizações
                 database.ref('raws/' + rawId + '/views').transaction((currentViews) => {
@@ -102,7 +102,7 @@
                 
             } catch (error) {
                 console.error('Erro ao carregar raw:', error);
-                document.body.textContent = 'Erro ao carregar o código.';
+                document.getElementById('codeContent').textContent = 'Erro ao carregar o código.';
             }
         }
 
@@ -113,7 +113,8 @@
                 const selectedText = window.getSelection().toString();
                 if (!selectedText) {
                     // Se nada estiver selecionado, copia todo o código
-                    navigator.clipboard.writeText(document.body.textContent).then(() => {
+                    const codeContent = document.getElementById('codeContent').textContent;
+                    navigator.clipboard.writeText(codeContent).then(() => {
                         // Feedback visual sutil
                         document.body.style.backgroundColor = '#003300';
                         setTimeout(() => {
