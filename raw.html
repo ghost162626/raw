@@ -5,46 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CodeRaw - Visualizar Código</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background-color: #000000; 
+            color: #00ff00; 
+            font-family: 'Courier New', monospace; 
+            font-size: 14px; 
+            white-space: pre; 
+            padding: 20px;
         }
-        
-        body {
-            background-color: #000000;
-            color: #00ff00;
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            line-height: 1.4;
-            white-space: pre;
-            overflow-x: auto;
-            padding: 0;
-            margin: 0;
-            min-height: 100vh;
-        }
-        
-        html, body {
-            height: 100%;
-            width: 100%;
-        }
-        
-        ::selection {
-            background-color: #00ff00;
-            color: #000000;
-        }
+        ::selection { background-color: #00ff00; color: #000000; }
     </style>
 </head>
 <body>
-    <!-- O código será inserido diretamente aqui -->
     <div id="codeContent"></div>
 
-    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     
     <script>
-        // Configuração do Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyBrkKTDKcKA16a1fL4mR3VKjArmxBUb8ho",
             authDomain: "coderaw-2025.firebaseapp.com",
@@ -56,76 +35,65 @@
             measurementId: "G-GV2X7STJQD"
         };
 
-        // Inicializar Firebase
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
-        // Obter ID do raw da URL
         const urlParams = new URLSearchParams(window.location.search);
         const rawId = urlParams.get('id');
         const key = urlParams.get('key');
+        const api = urlParams.get('api');
 
-        // Carregar raw
-        if (rawId) {
-            loadRaw(rawId, key);
-        }
-
-        async function loadRaw(rawId, key) {
+        async function loadRaw() {
             try {
+                if (!rawId) {
+                    showError('Erro: ID não especificado');
+                    return;
+                }
+
                 const rawRef = database.ref('raws/' + rawId);
                 const snapshot = await rawRef.once('value');
                 
                 if (!snapshot.exists()) {
-                    document.getElementById('codeContent').textContent = 'Erro: Raw não encontrado.';
+                    showError('Erro: Raw não encontrado');
                     return;
                 }
                 
                 const raw = snapshot.val();
                 
-                // Verificar se é privado e precisa de chave
                 if (raw.visibility === 'private') {
                     if (!key || key !== raw.privateKey) {
-                        document.getElementById('codeContent').textContent = 'Erro: Chave de acesso inválida.';
+                        showError('Erro: Chave de acesso inválida');
                         return;
                     }
                 }
                 
-                // Mostrar o código na página
+                // Se for requisição API (do Roblox), retorna só o código
+                if (api === "true" || navigator.userAgent.includes('Roblox')) {
+                    document.body.textContent = raw.code;
+                    return;
+                }
+                
+                // Se for visualização normal, mostra a página completa
                 document.getElementById('codeContent').textContent = raw.code;
                 
-                // ADICIONAR: Criar um elemento hidden com o código puro para o HttpGet
-                const rawCodeElement = document.createElement('div');
-                rawCodeElement.id = 'rawCodeData';
-                rawCodeElement.style.display = 'none';
-                rawCodeElement.textContent = raw.code;
-                document.body.appendChild(rawCodeElement);
-                
-                // Incrementar visualizações
                 database.ref('raws/' + rawId + '/views').transaction((currentViews) => {
                     return (currentViews || 0) + 1;
                 });
                 
             } catch (error) {
-                console.error('Erro ao carregar raw:', error);
-                document.getElementById('codeContent').textContent = 'Erro ao carregar o código.';
+                showError('Erro ao carregar o código');
             }
         }
 
-        // Função para copiar código
-        document.addEventListener('keydown', function(e) {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
-                const selectedText = window.getSelection().toString();
-                if (!selectedText) {
-                    const codeContent = document.getElementById('codeContent').textContent;
-                    navigator.clipboard.writeText(codeContent).then(() => {
-                        document.body.style.backgroundColor = '#003300';
-                        setTimeout(() => {
-                            document.body.style.backgroundColor = '#000000';
-                        }, 200);
-                    });
-                }
+        function showError(message) {
+            if (api === "true" || navigator.userAgent.includes('Roblox')) {
+                document.body.textContent = message;
+            } else {
+                document.getElementById('codeContent').textContent = message;
             }
-        });
+        }
+
+        if (rawId) loadRaw();
     </script>
 </body>
 </html>
