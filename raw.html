@@ -1,29 +1,9 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CodeRaw - Visualizar Código</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            background-color: #000000; 
-            color: #00ff00; 
-            font-family: 'Courier New', monospace; 
-            font-size: 14px; 
-            white-space: pre; 
-            padding: 20px;
-        }
-        ::selection { background-color: #00ff00; color: #000000; }
-    </style>
-</head>
 <body>
-    <div id="codeContent"></div>
-
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     
     <script>
+        // Configuração do Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyBrkKTDKcKA16a1fL4mR3VKjArmxBUb8ho",
             authDomain: "coderaw-2025.firebaseapp.com",
@@ -38,15 +18,15 @@
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
+        // Obter ID do raw da URL
         const urlParams = new URLSearchParams(window.location.search);
         const rawId = urlParams.get('id');
         const key = urlParams.get('key');
-        const api = urlParams.get('api');
 
         async function loadRaw() {
             try {
                 if (!rawId) {
-                    showError('Erro: ID não especificado');
+                    document.body.textContent = 'Erro: ID não especificado';
                     return;
                 }
 
@@ -54,46 +34,34 @@
                 const snapshot = await rawRef.once('value');
                 
                 if (!snapshot.exists()) {
-                    showError('Erro: Raw não encontrado');
+                    document.body.textContent = 'Erro: Raw não encontrado';
                     return;
                 }
                 
                 const raw = snapshot.val();
                 
+                // Verificar se é privado
                 if (raw.visibility === 'private') {
                     if (!key || key !== raw.privateKey) {
-                        showError('Erro: Chave de acesso inválida');
+                        document.body.textContent = 'Erro: Chave de acesso inválida';
                         return;
                     }
                 }
                 
-                // Se for requisição API (do Roblox), retorna só o código
-                if (api === "true" || navigator.userAgent.includes('Roblox')) {
-                    document.body.textContent = raw.code;
-                    return;
-                }
+                // Retornar APENAS o código em texto puro
+                document.body.textContent = raw.code;
                 
-                // Se for visualização normal, mostra a página completa
-                document.getElementById('codeContent').textContent = raw.code;
-                
+                // Incrementar visualizações
                 database.ref('raws/' + rawId + '/views').transaction((currentViews) => {
                     return (currentViews || 0) + 1;
                 });
                 
             } catch (error) {
-                showError('Erro ao carregar o código');
+                document.body.textContent = 'Erro ao carregar o código';
             }
         }
 
-        function showError(message) {
-            if (api === "true" || navigator.userAgent.includes('Roblox')) {
-                document.body.textContent = message;
-            } else {
-                document.getElementById('codeContent').textContent = message;
-            }
-        }
-
-        if (rawId) loadRaw();
+        loadRaw();
     </script>
 </body>
 </html>
