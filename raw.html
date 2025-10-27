@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeRaw - Visualizar Código</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background-color: #000000;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.4;
+            white-space: pre;
+            overflow-x: auto;
+            padding: 0;
+            margin: 0;
+            min-height: 100vh;
+        }
+        
+        /* Remove qualquer padding ou margem */
+        html, body {
+            height: 100%;
+            width: 100%;
+        }
+        
+        /* Estilo para seleção de texto */
+        ::selection {
+            background-color: #00ff00;
+            color: #000000;
+        }
+    </style>
+</head>
+<body>
+    <!-- Apenas o código será inserido aqui pelo JavaScript -->
+    <div id="codeContent"></div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    
+    <script>
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyBrkKTDKcKA16a1fL4mR3VKjArmxBUb8ho",
+            authDomain: "coderaw-2025.firebaseapp.com",
+            databaseURL: "https://coderaw-2025-default-rtdb.firebaseio.com",
+            projectId: "coderaw-2025",
+            storageBucket: "coderaw-2025.firebasestorage.app",
+            messagingSenderId: "134498624143",
+            appId: "1:134498624143:web:706e250b656061732046fa",
+            measurementId: "G-GV2X7STJQD"
+        };
+
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // Obter ID do raw da URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const rawId = urlParams.get('id');
+        const key = urlParams.get('key');
+
+        // Carregar raw
+        if (rawId) {
+            loadRaw(rawId, key);
+        }
+
+        async function loadRaw(rawId, key) {
+            try {
+                const rawRef = database.ref('raws/' + rawId);
+                const snapshot = await rawRef.once('value');
+                
+                if (!snapshot.exists()) {
+                    document.body.textContent = 'Erro: Raw não encontrado.';
+                    return;
+                }
+                
+                const raw = snapshot.val();
+                
+                // Verificar se é privado e precisa de chave
+                if (raw.visibility === 'private') {
+                    if (!key || key !== raw.privateKey) {
+                        document.body.textContent = 'Erro: Chave de acesso inválida.';
+                        return;
+                    }
+                }
+                
+                // Mostrar APENAS o código, diretamente no body
+                document.body.textContent = raw.code;
+                
+                // Incrementar visualizações
+                database.ref('raws/' + rawId + '/views').transaction((currentViews) => {
+                    return (currentViews || 0) + 1;
+                });
+                
+            } catch (error) {
+                console.error('Erro ao carregar raw:', error);
+                document.body.textContent = 'Erro ao carregar o código.';
+            }
+        }
+
+        // Função para copiar código (atalho Ctrl+C ainda funciona)
+        document.addEventListener('keydown', function(e) {
+            // Ctrl+C ou Cmd+C
+            if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+                const selectedText = window.getSelection().toString();
+                if (!selectedText) {
+                    // Se nada estiver selecionado, copia todo o código
+                    navigator.clipboard.writeText(document.body.textContent).then(() => {
+                        // Feedback visual sutil
+                        document.body.style.backgroundColor = '#003300';
+                        setTimeout(() => {
+                            document.body.style.backgroundColor = '#000000';
+                        }, 200);
+                    });
+                }
+            }
+        });
+    </script>
+</body>
+</html>
